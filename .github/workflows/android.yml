@@ -1,0 +1,61 @@
+
+name: Build BuchstabenCraft Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Godot
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+          unzip -q Godot_v4.4.1-stable_linux.x86_64.zip
+          mv Godot_v4.4.1-stable_linux.x86_64 godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Check project
+        run: |
+          ./godot --headless --editor --path . --import --quit
+
+      - name: Check required game files
+        run: |
+          test -f project.godot
+          test -f main.gd
+          test -f main.tscn
+          test -f questions_grade1.json
+          test -d clips
+          test -f export_presets.cfg
+
+      - name: Install Android export templates
+        run: |
+          mkdir -p ~/.local/share/godot/export_templates/4.4.1.stable
+          wget -q https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
+          unzip -q Godot_v4.4.1-stable_export_templates.tpz
+          cp templates/* ~/.local/share/godot/export_templates/4.4.1.stable/
+
+      - name: Export Android APK
+        run: |
+          mkdir -p build
+          ./godot --headless --path . --export-debug "Android" build/BuchstabenCraft.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: BuchstabenCraft-Android
+          path: build/BuchstabenCraft.apk
+          if-no-files-found: error
+          
